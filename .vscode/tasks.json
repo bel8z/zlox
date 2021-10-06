@@ -4,7 +4,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "zig build",
             "command": "zig",
             "type": "shell",
             "args": [
@@ -14,10 +14,10 @@
             "presentation": {
                 "reveal": "always"
             },
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$msCompile",
         },
         {
-            "label": "run",
+            "label": "zig run",
             "command": "zig",
             "type": "shell",
             "args": [
@@ -29,6 +29,23 @@
                 "reveal": "always"
             },
             "problemMatcher": "$msCompile"
-        }
+        },
+        {
+            "label": "zig test",
+            "command": "zig",
+            "type": "shell",
+            "args": [
+                "build",
+                "test",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": "$msCompile"
+        },
     ]
 }

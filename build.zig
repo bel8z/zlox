@@ -11,9 +11,12 @@ pub fn build(b: *std.build.Builder) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
 
+    //=== Main exe ===//
+
     const exe = b.addExecutable("zlox", "src/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
+    exe.linkLibC();
     exe.install();
 
     const run_cmd = exe.run();
@@ -24,4 +27,12 @@ pub fn build(b: *std.build.Builder) void {
 
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
+
+    //=== Tests ===//
+
+    const tst = b.addTest("src/tests.zig");
+    tst.setBuildMode(mode);
+
+    const tst_step = b.step("test", "Run the tests");
+    tst_step.dependOn(&tst.step);
 }
