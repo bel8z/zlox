@@ -1,19 +1,24 @@
 const std = @import("std");
-const fs = std.fs;
+
+const lox = @import("lox.zig");
 
 pub fn main() anyerror!void {
     // Setup the main allocator (useful for debugging)
-    // var gpalloc = std.heap.GeneralPurposeAllocator(.{}){};
-    // var alloc = &gpalloc.allocator;
-    // defer _ = gpalloc.deinit();
+    var gpalloc = std.heap.GeneralPurposeAllocator(.{}){};
+    var alloc = &gpalloc.allocator;
+    defer _ = gpalloc.deinit();
 
-    // const stdout = std.io.getStdOut().writer();
+    const args = try std.process.argsAlloc(alloc);
+    defer std.process.argsFree(alloc, args);
 
-    // var reader = std.io.bufferedReader(f.reader()).reader();
-    // while (true) {
-    //     var maybe_line = try reader.readUntilDelimiterOrEof(buf[0..], '\n');
-    //     if (maybe_line) |line| {
-    //         try stdout.print("{s}", .{line});
-    //     }
-    // }
+    var stdout = std.io.getStdOut().writer();
+
+    switch (args.len) {
+        1 => try lox.repl(alloc),
+        2 => try lox.runFile(alloc, args[1]),
+        else => {
+            try stdout.print("Usage: lox [path]\n", .{});
+            std.process.exit(64);
+        },
+    }
 }

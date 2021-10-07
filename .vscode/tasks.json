@@ -38,10 +38,7 @@
                 "build",
                 "test",
             ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "group": "build",
             "presentation": {
                 "reveal": "always"
             },
