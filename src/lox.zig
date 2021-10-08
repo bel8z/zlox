@@ -217,6 +217,8 @@ const Scanner = struct {
             '\n' => self.line += 1,
             // Identifiers
             // Strings
+            '"' => try self.string(),
+            //
             else => try reportError(self.line, "Invalid token: {}", .{c}),
         }
     }
@@ -240,6 +242,32 @@ const Scanner = struct {
 
     fn peek(self: *Self) u8 {
         return if (self.isAtEnd()) 0 else self.source[self.current];
+    }
+
+    fn peekNext(self: *Self) u8 {
+        var next = self.current + 1;
+        return if (next >= self.source.len) 0 else self.source[next];
+    }
+
+    fn string(self: *Self) !void {
+        while (self.peek() != '"' and !self.isAtEnd()) {
+            if (self.peek() == '\n') {
+                self.line += 1;
+            }
+            _ = self.advance();
+        }
+
+        if (self.isAtEnd()) {
+            try reportError(self.line, "Unterminated string.", .{});
+            return;
+        }
+
+        // The closing ".
+        _ = self.advance();
+
+        // Trim the surrounding quotes.
+        var value = self.source[self.start + 1 .. self.current - 1];
+        try self.addTokenLiteral(TokenType.STRING, Literal{ .string = value });
     }
 
     fn addToken(self: *Self, tok_type: TokenType) !void {
