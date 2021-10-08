@@ -72,6 +72,7 @@ const Literal = union(enum) {
     identifier: []u8,
     number: f64,
     string: []u8,
+    none,
 };
 
 const TokenType = enum {
@@ -126,7 +127,7 @@ const TokenType = enum {
 const Token = struct {
     type: TokenType,
     lexeme: []u8,
-    literal: ?Literal,
+    literal: Literal,
     line: usize,
 
     pub fn format(
@@ -138,14 +139,11 @@ const Token = struct {
         _ = fmt;
         _ = options;
 
-        if (self.literal) |literal| {
-            switch (literal) {
-                .string => |value| try std.fmt.format(writer, "{} {s}", .{ self.type, value }),
-                .identifier => |value| try std.fmt.format(writer, "{} {s}", .{ self.type, value }),
-                .number => |value| try std.fmt.format(writer, "{} {}", .{ self.type, value }),
-            }
-        } else {
-            try std.fmt.format(writer, "{}", .{self.type});
+        switch (self.literal) {
+            Literal.string => |value| try std.fmt.format(writer, "{} {s}", .{ self.type, value }),
+            Literal.identifier => |value| try std.fmt.format(writer, "{} {s}", .{ self.type, value }),
+            Literal.number => |value| try std.fmt.format(writer, "{} {}", .{ self.type, value }),
+            Literal.none => try std.fmt.format(writer, "{} {s}", .{ self.type, self.lexeme }),
         }
     }
 };
@@ -181,7 +179,7 @@ const Scanner = struct {
 
         try self.tokens.append(Token{
             .type = .EOF,
-            .literal = null,
+            .literal = Literal.none,
             .lexeme = "",
             .line = self.line,
         });
@@ -225,7 +223,15 @@ const Scanner = struct {
             // Strings
             '"' => try self.string(),
             //
-            else => try reportError(self.line, "Invalid token: {}", .{c}),
+            else => {
+                if (isDigit(c)) {
+                    try self.number();
+                } else if (isAlpha(c)) {
+                    try self.identifier();
+                } else {
+                    try reportError(self.line, "Invalid token: {}", .{c});
+                }
+            },
         }
     }
 
@@ -276,11 +282,52 @@ const Scanner = struct {
         try self.addTokenLiteral(TokenType.STRING, Literal{ .string = value });
     }
 
-    fn addToken(self: *Self, tok_type: TokenType) !void {
-        try self.addTokenLiteral(tok_type, null);
+    fn number(self: *Self) !void {
+        while (isDigit(self.peek())) {
+            _ = self.advance();
+        }
+
+        // Look for a fractional part.
+        if (self.peek() == '.' and isDigit(self.peekNext())) {
+            // Consume the "."
+            _ = self.advance();
+
+            while (isDigit(self.peek())) {
+                _ = self.advance();
+            }
+        }
+
+        var lexeme = self.source[self.start..self.current];
+        var value = std.fmt.parseFloat(f64, lexeme) catch unreachable;
+
+        try self.tokens.append(Token{
+            .type = TokenType.NUMBER,
+            .literal = Literal{ .number = value },
+            .lexeme = lexeme,
+            .line = self.line,
+        });
     }
 
-    fn addTokenLiteral(self: *Self, tok_type: TokenType, literal: ?Literal) !void {
+    fn identifier(self: *Self) !void {
+        while (isAlphaNumeric(self.peek())) {
+            _ = self.advance();
+        }
+
+        var value = self.source[self.start..self.current];
+
+        try self.tokens.append(Token{
+            .type = TokenType.IDENTIFIER,
+            .literal = Literal{ .identifier = value },
+            .lexeme = value,
+            .line = self.line,
+        });
+    }
+
+    fn addToken(self: *Self, tok_type: TokenType) !void {
+        try self.addTokenLiteral(tok_type, Literal.none);
+    }
+
+    fn addTokenLiteral(self: *Self, tok_type: TokenType, literal: Literal) !void {
         try self.tokens.append(Token{
             .type = tok_type,
             .literal = literal,
@@ -289,5 +336,17 @@ const Scanner = struct {
         });
     }
 };
+
+fn isDigit(c: u8) bool {
+    return (c >= '0' and c <= '9');
+}
+
+fn isAlpha(c: u8) bool {
+    return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or c == '_';
+}
+
+fn isAlphaNumeric(c: u8) bool {
+    return isAlpha(c) or isDigit(c);
+}
 
 //=== EOF ===//
