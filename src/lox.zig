@@ -130,7 +130,7 @@ const Token = struct {
     line: usize,
 
     pub fn format(
-        value: *const Token,
+        self: *const Token,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
         writer: anytype,
@@ -138,9 +138,15 @@ const Token = struct {
         _ = fmt;
         _ = options;
 
-        try std.fmt.format(writer, "{}", .{
-            value.type,
-        });
+        if (self.literal) |literal| {
+            switch (literal) {
+                .string => |value| try std.fmt.format(writer, "{} {s}", .{ self.type, value }),
+                .identifier => |value| try std.fmt.format(writer, "{} {s}", .{ self.type, value }),
+                .number => |value| try std.fmt.format(writer, "{} {}", .{ self.type, value }),
+            }
+        } else {
+            try std.fmt.format(writer, "{}", .{self.type});
+        }
     }
 };
 
