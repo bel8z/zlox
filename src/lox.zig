@@ -205,10 +205,11 @@ const Scanner = struct {
             '/' => {
                 if (self.match('/')) {
                     while (self.peek() != '\n' and !self.isAtEnd()) {
-                        advance();
+                        // Discard comment characters until the line end
+                        _ = self.advance();
                     }
                 } else {
-                    self.addToken(TokenType.SLASH);
+                    try self.addToken(TokenType.SLASH);
                 }
             },
             // Whitespace
