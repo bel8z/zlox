@@ -64,8 +64,7 @@ pub const Scanner = struct {
                     return s;
                 } else |err| switch (err) {
                     error.UnterminatedString => {
-                        // TODO (Matteo): Better error handling
-                        lox.reportError(self.line, "Unterminated string.", .{}) catch unreachable;
+                        lox.reportError(self.line, "Unterminated string.", .{});
                     },
                     else => unreachable,
                 },
@@ -76,8 +75,7 @@ pub const Scanner = struct {
                     } else if (isAlpha(c)) {
                         return self.identifier();
                     } else {
-                        // TODO (Matteo): better error handling
-                        lox.reportError(self.line, "Invalid token: {}", .{c}) catch unreachable;
+                        lox.reportError(self.line, "Invalid token: {}", .{c});
                     }
                 },
             }

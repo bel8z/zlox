@@ -63,17 +63,21 @@ fn run(allocator: *mem.Allocator, bytes: []u8) !void {
 
 //=== Reporting ===//
 
-pub fn reportError(line: usize, comptime format: []const u8, args: anytype) !void {
+pub fn reportError(line: usize, comptime format: []const u8, args: anytype) void {
     had_error = true;
-    try report(line, "", format, args);
+    report(line, "", format, args);
 }
 
-pub fn report(line: usize, where: []u8, comptime format: []const u8, args: anytype) !void {
+pub fn report(line: usize, where: []u8, comptime format: []const u8, args: anytype) void {
     var out = std.io.getStdErr().writer();
 
-    try out.print("[line {}] Error{s}: ", .{ line, where });
-    try out.print(format, args);
-    try out.print("\n", .{});
+    // TODO (Matteo): Better error handling?
+    // Maybe but at the moment I don't want to bother if writing to stderr fails.
+    // We are a CLI interpreter after all.
+
+    out.print("[line {}] Error{s}: ", .{ line, where }) catch unreachable;
+    out.print(format, args) catch unreachable;
+    out.print("\n", .{}) catch unreachable;
 }
 
 //=== EOF ===//
