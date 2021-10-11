@@ -12,12 +12,12 @@ pub const Scanner = struct {
     start: usize = 0,
     current: usize = 0,
     line: usize = 1,
-    keywords: *lox.KeywordMap,
+    ctx: *lox.Lox,
 
-    pub fn init(bytes: []u8, keys: *lox.KeywordMap) Self {
+    pub fn init(bytes: []u8, ctx: *lox.Lox) Self {
         return Self{
             .source = bytes,
-            .keywords = keys,
+            .ctx = ctx,
         };
     }
 
@@ -66,7 +66,7 @@ pub const Scanner = struct {
                     return s;
                 } else |err| switch (err) {
                     error.UnterminatedString => {
-                        lox.reportError(self.line, "Unterminated string.", .{});
+                        self.ctx.reportError(self.line, "Unterminated string.", .{});
                     },
                     else => unreachable,
                 },
@@ -77,7 +77,7 @@ pub const Scanner = struct {
                     } else if (isAlpha(c)) {
                         return self.identifier();
                     } else {
-                        lox.reportError(self.line, "Invalid token: {}", .{c});
+                        self.ctx.reportError(self.line, "Invalid token: {}", .{c});
                     }
                 },
             }
@@ -169,7 +169,7 @@ pub const Scanner = struct {
         }
 
         const value: []u8 = self.source[self.start..self.current];
-        const key = self.keyword(value) orelse TokenType.IDENTIFIER;
+        const key = self.ctx.keywords.get(value) orelse TokenType.IDENTIFIER;
 
         return Token{
             .type = key,
@@ -190,10 +190,6 @@ pub const Scanner = struct {
             .lexeme = self.source[self.start..self.current],
             .line = self.line,
         };
-    }
-
-    fn keyword(self: *Self, value: []const u8) ?TokenType {
-        return self.keywords.get(value);
     }
 };
 

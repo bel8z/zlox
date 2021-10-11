@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const lox = @import("lox.zig");
+const Lox = @import("lox.zig").Lox;
 
 pub fn main() anyerror!void {
     // Setup the main allocator (useful for debugging)
@@ -13,9 +13,12 @@ pub fn main() anyerror!void {
 
     var stdout = std.io.getStdOut().writer();
 
+    var lox = try Lox.init(alloc);
+    defer lox.deinit();
+
     switch (args.len) {
-        1 => try lox.repl(alloc),
-        2 => try lox.runFile(alloc, args[1]),
+        1 => try lox.repl(),
+        2 => try lox.runFile(args[1]),
         else => {
             try stdout.print("Usage: lox [path]\n", .{});
             std.process.exit(64);
