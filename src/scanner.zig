@@ -1,5 +1,4 @@
 const std = @import("std");
-
 const lox = @import("lox.zig");
 
 const Token = lox.Token;
@@ -31,21 +30,21 @@ pub const Scanner = struct {
 
             switch (c) {
                 // Punctuation
-                '(' => return self.addToken(TokenType.LEFT_PAREN),
-                ')' => return self.addToken(TokenType.RIGHT_PAREN),
-                '{' => return self.addToken(TokenType.LEFT_BRACE),
-                '}' => return self.addToken(TokenType.RIGHT_BRACE),
-                ',' => return self.addToken(TokenType.COMMA),
-                '.' => return self.addToken(TokenType.DOT),
-                '-' => return self.addToken(TokenType.MINUS),
-                '+' => return self.addToken(TokenType.PLUS),
-                ';' => return self.addToken(TokenType.SEMICOLON),
-                '*' => return self.addToken(TokenType.STAR),
+                '(' => return self.token(TokenType.LEFT_PAREN),
+                ')' => return self.token(TokenType.RIGHT_PAREN),
+                '{' => return self.token(TokenType.LEFT_BRACE),
+                '}' => return self.token(TokenType.RIGHT_BRACE),
+                ',' => return self.token(TokenType.COMMA),
+                '.' => return self.token(TokenType.DOT),
+                '-' => return self.token(TokenType.MINUS),
+                '+' => return self.token(TokenType.PLUS),
+                ';' => return self.token(TokenType.SEMICOLON),
+                '*' => return self.token(TokenType.STAR),
                 // *_EQUAL operators
-                '!' => return self.addToken(if (self.match('=')) TokenType.BANG_EQUAL else TokenType.BANG),
-                '=' => return self.addToken(if (self.match('=')) TokenType.EQUAL_EQUAL else TokenType.EQUAL),
-                '<' => return self.addToken(if (self.match('=')) TokenType.LESS_EQUAL else TokenType.LESS),
-                '>' => return self.addToken(if (self.match('=')) TokenType.GREATER_EQUAL else TokenType.GREATER),
+                '!' => return self.token(if (self.match('=')) TokenType.BANG_EQUAL else TokenType.BANG),
+                '=' => return self.token(if (self.match('=')) TokenType.EQUAL_EQUAL else TokenType.EQUAL),
+                '<' => return self.token(if (self.match('=')) TokenType.LESS_EQUAL else TokenType.LESS),
+                '>' => return self.token(if (self.match('=')) TokenType.GREATER_EQUAL else TokenType.GREATER),
                 '/' => {
                     if (self.match('/')) {
                         while (self.peek() != '\n' and !self.isAtEnd()) {
@@ -53,11 +52,11 @@ pub const Scanner = struct {
                             _ = self.advance();
                         }
                     } else {
-                        return self.addToken(TokenType.SLASH);
+                        return self.token(TokenType.SLASH);
                     }
                 },
                 // Whitespace
-                ' ', '\r', 't' => {},
+                ' ', '\r', '\t' => {},
                 '\n' => self.line += 1,
                 // Identifiers
                 // Strings
@@ -135,7 +134,7 @@ pub const Scanner = struct {
 
         // Trim the surrounding quotes.
         var value = self.source[self.start + 1 .. self.current - 1];
-        return self.addTokenLiteral(TokenType.STRING, Literal{ .string = value });
+        return self.literal(TokenType.STRING, Literal{ .string = value });
     }
 
     fn number(self: *Self) Token {
@@ -169,24 +168,25 @@ pub const Scanner = struct {
             _ = self.advance();
         }
 
-        var value = self.source[self.start..self.current];
+        const value: []u8 = self.source[self.start..self.current];
+        const key = keyword(value) orelse TokenType.IDENTIFIER;
 
         return Token{
-            .type = TokenType.IDENTIFIER,
+            .type = key,
             .literal = Literal{ .identifier = value },
             .lexeme = value,
             .line = self.line,
         };
     }
 
-    fn addToken(self: *Self, tok_type: TokenType) Token {
-        return self.addTokenLiteral(tok_type, Literal.none);
+    fn token(self: *Self, tok_type: TokenType) Token {
+        return self.literal(tok_type, Literal.none);
     }
 
-    fn addTokenLiteral(self: *Self, tok_type: TokenType, literal: Literal) Token {
+    fn literal(self: *Self, tok_type: TokenType, value: Literal) Token {
         return Token{
             .type = tok_type,
-            .literal = literal,
+            .literal = value,
             .lexeme = self.source[self.start..self.current],
             .line = self.line,
         };
@@ -205,4 +205,26 @@ fn isAlpha(c: u8) bool {
 
 fn isAlphaNumeric(c: u8) bool {
     return isAlpha(c) or isDigit(c);
+}
+
+fn keyword(value: []const u8) ?TokenType {
+    // TODO (Matteo): Use a hash map
+    if (std.mem.eql(u8, "and", value)) return TokenType.AND;
+    if (std.mem.eql(u8, "class", value)) return TokenType.CLASS;
+    if (std.mem.eql(u8, "else", value)) return TokenType.ELSE;
+    if (std.mem.eql(u8, "false", value)) return TokenType.FALSE;
+    if (std.mem.eql(u8, "for", value)) return TokenType.FOR;
+    if (std.mem.eql(u8, "fun", value)) return TokenType.FUN;
+    if (std.mem.eql(u8, "if", value)) return TokenType.IF;
+    if (std.mem.eql(u8, "nil", value)) return TokenType.NIL;
+    if (std.mem.eql(u8, "or", value)) return TokenType.OR;
+    if (std.mem.eql(u8, "print", value)) return TokenType.PRINT;
+    if (std.mem.eql(u8, "return", value)) return TokenType.RETURN;
+    if (std.mem.eql(u8, "super", value)) return TokenType.SUPER;
+    if (std.mem.eql(u8, "this", value)) return TokenType.THIS;
+    if (std.mem.eql(u8, "true", value)) return TokenType.TRUE;
+    if (std.mem.eql(u8, "var", value)) return TokenType.VAR;
+    if (std.mem.eql(u8, "while", value)) return TokenType.WHILE;
+
+    return null;
 }
