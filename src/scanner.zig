@@ -12,10 +12,12 @@ pub const Scanner = struct {
     start: usize = 0,
     current: usize = 0,
     line: usize = 1,
+    keywords: *lox.KeywordMap,
 
-    pub fn init(bytes: []u8) Self {
+    pub fn init(bytes: []u8, keys: *lox.KeywordMap) Self {
         return Self{
             .source = bytes,
+            .keywords = keys,
         };
     }
 
@@ -167,7 +169,7 @@ pub const Scanner = struct {
         }
 
         const value: []u8 = self.source[self.start..self.current];
-        const key = keyword(value) orelse TokenType.IDENTIFIER;
+        const key = self.keyword(value) orelse TokenType.IDENTIFIER;
 
         return Token{
             .type = key,
@@ -189,6 +191,10 @@ pub const Scanner = struct {
             .line = self.line,
         };
     }
+
+    fn keyword(self: *Self, value: []const u8) ?TokenType {
+        return self.keywords.get(value);
+    }
 };
 
 //=== Utilities ===//
@@ -203,26 +209,4 @@ fn isAlpha(c: u8) bool {
 
 fn isAlphaNumeric(c: u8) bool {
     return isAlpha(c) or isDigit(c);
-}
-
-fn keyword(value: []const u8) ?TokenType {
-    // TODO (Matteo): Use a hash map
-    if (std.mem.eql(u8, "and", value)) return TokenType.AND;
-    if (std.mem.eql(u8, "class", value)) return TokenType.CLASS;
-    if (std.mem.eql(u8, "else", value)) return TokenType.ELSE;
-    if (std.mem.eql(u8, "false", value)) return TokenType.FALSE;
-    if (std.mem.eql(u8, "for", value)) return TokenType.FOR;
-    if (std.mem.eql(u8, "fun", value)) return TokenType.FUN;
-    if (std.mem.eql(u8, "if", value)) return TokenType.IF;
-    if (std.mem.eql(u8, "nil", value)) return TokenType.NIL;
-    if (std.mem.eql(u8, "or", value)) return TokenType.OR;
-    if (std.mem.eql(u8, "print", value)) return TokenType.PRINT;
-    if (std.mem.eql(u8, "return", value)) return TokenType.RETURN;
-    if (std.mem.eql(u8, "super", value)) return TokenType.SUPER;
-    if (std.mem.eql(u8, "this", value)) return TokenType.THIS;
-    if (std.mem.eql(u8, "true", value)) return TokenType.TRUE;
-    if (std.mem.eql(u8, "var", value)) return TokenType.VAR;
-    if (std.mem.eql(u8, "while", value)) return TokenType.WHILE;
-
-    return null;
 }
