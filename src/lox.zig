@@ -14,8 +14,6 @@ const Scanner = @import("scanner.zig").Scanner;
 // Constants
 const max_size = 1024 * 1024 * 1024;
 
-//=== Main interpreter loops ===//
-
 pub const Lox = struct {
     const Self = @This();
 
@@ -23,6 +21,8 @@ pub const Lox = struct {
     allocator: *mem.Allocator,
     stderr: std.fs.File.Writer,
     keywords: std.StringHashMap(TokenType),
+
+    //=== Init / deinit ===//
 
     pub fn init(allocator: *mem.Allocator) !Self {
         return Self{
@@ -36,6 +36,8 @@ pub const Lox = struct {
     pub fn deinit(self: *Self) void {
         self.keywords.deinit();
     }
+
+    //=== Main interpreter loops ===//
 
     pub fn repl(self: *Self) !void {
         var stdin = io.bufferedReader(io.getStdIn().reader()).reader();
