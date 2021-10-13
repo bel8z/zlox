@@ -8,15 +8,15 @@ const Literal = lox.Literal;
 pub const Scanner = struct {
     const Self = @This();
 
+    ctx: *lox.Lox,
     source: []u8,
     start: usize = 0,
     current: usize = 0,
     line: usize = 1,
-    ctx: *lox.Lox,
 
-    pub fn init(bytes: []u8, ctx: *lox.Lox) Self {
+    pub fn init(ctx: *lox.Lox, source: []u8) Self {
         return Self{
-            .source = bytes,
+            .source = source,
             .ctx = ctx,
         };
     }
@@ -28,7 +28,9 @@ pub const Scanner = struct {
             // We are at the beginning of the next lexeme.
             self.start = self.current;
 
-            var c = self.advance();
+            var c = self.peek();
+
+            self.advance();
 
             switch (c) {
                 // Punctuation
@@ -49,10 +51,8 @@ pub const Scanner = struct {
                 '>' => return self.makeToken(if (self.match('=')) .GREATER_EQUAL else .GREATER),
                 '/' => {
                     if (self.match('/')) {
-                        while (self.peek() != '\n' and !self.isAtEnd()) {
-                            // Discard comment characters until the line end
-                            _ = self.advance();
-                        }
+                        // Discard comment characters until the line end
+                        while (!self.isAtEnd() and self.peek() != '\n') self.advance();
                     } else {
                         return self.makeToken(.SLASH);
                     }
@@ -95,10 +95,8 @@ pub const Scanner = struct {
         return self.current >= self.source.len;
     }
 
-    fn advance(self: *Self) u8 {
-        var c = self.source[self.current];
+    fn advance(self: *Self) void {
         self.current += 1;
-        return c;
     }
 
     fn match(self: *Self, expected: u8) bool {
@@ -122,11 +120,9 @@ pub const Scanner = struct {
     }
 
     fn makeString(self: *Self) !Token {
-        while (self.peek() != '"' and !self.isAtEnd()) {
-            if (self.peek() == '\n') {
-                self.line += 1;
-            }
-            _ = self.advance();
+        while (!self.isAtEnd() and self.peek() != '"') {
+            if (self.peek() == '\n') self.line += 1;
+            self.advance();
         }
 
         if (self.isAtEnd()) {
@@ -134,7 +130,7 @@ pub const Scanner = struct {
         }
 
         // The closing ".
-        _ = self.advance();
+        self.advance();
 
         // Trim the surrounding quotes.
         var value = self.source[self.start + 1 .. self.current - 1];
@@ -142,18 +138,14 @@ pub const Scanner = struct {
     }
 
     fn makeNumber(self: *Self) Token {
-        while (isDigit(self.peek())) {
-            _ = self.advance();
-        }
+        while (isDigit(self.peek())) self.advance();
 
         // Look for a fractional part.
         if (self.peek() == '.' and isDigit(self.peekNext())) {
             // Consume the "."
-            _ = self.advance();
+            self.advance();
 
-            while (isDigit(self.peek())) {
-                _ = self.advance();
-            }
+            while (isDigit(self.peek())) self.advance();
         }
 
         var lexeme = self.source[self.start..self.current];
@@ -168,9 +160,7 @@ pub const Scanner = struct {
     }
 
     fn makeIdentifier(self: *Self) Token {
-        while (isAlphaNumeric(self.peek())) {
-            _ = self.advance();
-        }
+        while (isAlphaNumeric(self.peek())) self.advance();
 
         const value: []u8 = self.source[self.start..self.current];
         const key = self.ctx.keywords.get(value) orelse .IDENTIFIER;

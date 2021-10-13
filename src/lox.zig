@@ -4,6 +4,8 @@ const mem = std.mem;
 const io = std.io;
 const List = std.ArrayList;
 
+pub const assert = std.debug.assert;
+
 pub const Token = _token.Token;
 pub const TokenType = _token.TokenType;
 pub const Literal = _token.Literal;
@@ -68,8 +70,8 @@ pub const Lox = struct {
         if (self.had_error) std.process.exit(65);
     }
 
-    fn run(self: *Self, bytes: []u8) !void {
-        var scanner = Scanner.init(bytes, self);
+    fn run(self: *Self, source: []u8) !void {
+        var scanner = Scanner.init(self, source);
 
         // TODO (Matteo): Is a list really needed? Maybe for later parsing
         var tokens = List(Token).init(self.allocator);
