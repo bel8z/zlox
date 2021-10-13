@@ -10,7 +10,6 @@ pub const Scanner = struct {
 
     ctx: *lox.Lox,
     source: []u8,
-    start: usize = 0,
     current: usize = 0,
     line: usize = 1,
 
@@ -26,7 +25,8 @@ pub const Scanner = struct {
 
         while (!self.isAtEnd()) {
             // We are at the beginning of the next lexeme.
-            self.start = self.current;
+            self.source = self.source[self.current..];
+            self.current = 0;
 
             var c = self.peek();
 
@@ -100,23 +100,33 @@ pub const Scanner = struct {
     }
 
     fn match(self: *Self, expected: u8) bool {
-        if (self.isAtEnd()) return false;
-        if (self.source[self.current] != expected) return false;
-        self.current += 1;
-        return true;
+        if (self.peek() == expected) {
+            self.advance();
+            return true;
+        }
+        return false;
     }
 
-    fn peek(self: *Self) u8 {
+    fn peek(self: *const Self) u8 {
         return if (self.isAtEnd()) 0 else self.source[self.current];
     }
 
-    fn peekNext(self: *Self) u8 {
+    fn peekNext(self: *const Self) u8 {
         var next = self.current + 1;
         return if (next >= self.source.len) 0 else self.source[next];
     }
 
-    fn makeToken(self: *Self, tok_type: TokenType) Token {
+    fn makeToken(self: *const Self, tok_type: TokenType) Token {
         return self.makeLiteral(tok_type, Literal.none);
+    }
+
+    fn makeLiteral(self: *const Self, tok_type: TokenType, value: Literal) Token {
+        return Token{
+            .type = tok_type,
+            .literal = value,
+            .lexeme = self.source[0..self.current],
+            .line = self.line,
+        };
     }
 
     fn makeString(self: *Self) !Token {
@@ -133,7 +143,7 @@ pub const Scanner = struct {
         self.advance();
 
         // Trim the surrounding quotes.
-        var value = self.source[self.start + 1 .. self.current - 1];
+        var value = self.source[1 .. self.current - 1];
         return self.makeLiteral(.STRING, Literal{ .string = value });
     }
 
@@ -148,7 +158,7 @@ pub const Scanner = struct {
             while (isDigit(self.peek())) self.advance();
         }
 
-        var lexeme = self.source[self.start..self.current];
+        var lexeme = self.source[0..self.current];
         var value = std.fmt.parseFloat(f64, lexeme) catch unreachable;
 
         return Token{
@@ -162,22 +172,13 @@ pub const Scanner = struct {
     fn makeIdentifier(self: *Self) Token {
         while (isAlphaNumeric(self.peek())) self.advance();
 
-        const value: []u8 = self.source[self.start..self.current];
+        const value = self.source[0..self.current];
         const key = self.ctx.keywords.get(value) orelse .IDENTIFIER;
 
         return Token{
             .type = key,
             .literal = .{ .string = value },
             .lexeme = value,
-            .line = self.line,
-        };
-    }
-
-    fn makeLiteral(self: *Self, tok_type: TokenType, value: Literal) Token {
-        return Token{
-            .type = tok_type,
-            .literal = value,
-            .lexeme = self.source[self.start..self.current],
             .line = self.line,
         };
     }
