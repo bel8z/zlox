@@ -2,7 +2,6 @@
 const std = @import("std");
 
 pub const Literal = union(enum) {
-    identifier: []u8,
     number: f64,
     string: []u8,
     none,
@@ -73,10 +72,9 @@ pub const Token = struct {
         _ = options;
 
         switch (self.literal) {
-            Literal.string => |value| try std.fmt.format(writer, "{} {s}", .{ self.type, value }),
-            Literal.identifier => |value| try std.fmt.format(writer, "{} {s}", .{ self.type, value }),
-            Literal.number => |value| try std.fmt.format(writer, "{} {}", .{ self.type, value }),
-            Literal.none => try std.fmt.format(writer, "{} {s}", .{ self.type, self.lexeme }),
+            .string => |value| try std.fmt.format(writer, "{} {s}", .{ self.type, value }),
+            .number => |value| try std.fmt.format(writer, "{} {}", .{ self.type, value }),
+            .none => try std.fmt.format(writer, "{} {s}", .{ self.type, self.lexeme }),
         }
     }
 };

@@ -32,21 +32,21 @@ pub const Scanner = struct {
 
             switch (c) {
                 // Punctuation
-                '(' => return self.makeToken(TokenType.LEFT_PAREN),
-                ')' => return self.makeToken(TokenType.RIGHT_PAREN),
-                '{' => return self.makeToken(TokenType.LEFT_BRACE),
-                '}' => return self.makeToken(TokenType.RIGHT_BRACE),
-                ',' => return self.makeToken(TokenType.COMMA),
-                '.' => return self.makeToken(TokenType.DOT),
-                '-' => return self.makeToken(TokenType.MINUS),
-                '+' => return self.makeToken(TokenType.PLUS),
-                ';' => return self.makeToken(TokenType.SEMICOLON),
-                '*' => return self.makeToken(TokenType.STAR),
+                '(' => return self.makeToken(.LEFT_PAREN),
+                ')' => return self.makeToken(.RIGHT_PAREN),
+                '{' => return self.makeToken(.LEFT_BRACE),
+                '}' => return self.makeToken(.RIGHT_BRACE),
+                ',' => return self.makeToken(.COMMA),
+                '.' => return self.makeToken(.DOT),
+                '-' => return self.makeToken(.MINUS),
+                '+' => return self.makeToken(.PLUS),
+                ';' => return self.makeToken(.SEMICOLON),
+                '*' => return self.makeToken(.STAR),
                 // *_EQUAL operators
-                '!' => return self.makeToken(if (self.match('=')) TokenType.BANG_EQUAL else TokenType.BANG),
-                '=' => return self.makeToken(if (self.match('=')) TokenType.EQUAL_EQUAL else TokenType.EQUAL),
-                '<' => return self.makeToken(if (self.match('=')) TokenType.LESS_EQUAL else TokenType.LESS),
-                '>' => return self.makeToken(if (self.match('=')) TokenType.GREATER_EQUAL else TokenType.GREATER),
+                '!' => return self.makeToken(if (self.match('=')) .BANG_EQUAL else .BANG),
+                '=' => return self.makeToken(if (self.match('=')) .EQUAL_EQUAL else .EQUAL),
+                '<' => return self.makeToken(if (self.match('=')) .LESS_EQUAL else .LESS),
+                '>' => return self.makeToken(if (self.match('=')) .GREATER_EQUAL else .GREATER),
                 '/' => {
                     if (self.match('/')) {
                         while (self.peek() != '\n' and !self.isAtEnd()) {
@@ -54,7 +54,7 @@ pub const Scanner = struct {
                             _ = self.advance();
                         }
                     } else {
-                        return self.makeToken(TokenType.SLASH);
+                        return self.makeToken(.SLASH);
                     }
                 },
                 // Whitespace
@@ -138,7 +138,7 @@ pub const Scanner = struct {
 
         // Trim the surrounding quotes.
         var value = self.source[self.start + 1 .. self.current - 1];
-        return self.makeLiteral(TokenType.STRING, Literal{ .string = value });
+        return self.makeLiteral(.STRING, Literal{ .string = value });
     }
 
     fn makeNumber(self: *Self) Token {
@@ -160,8 +160,8 @@ pub const Scanner = struct {
         var value = std.fmt.parseFloat(f64, lexeme) catch unreachable;
 
         return Token{
-            .type = TokenType.NUMBER,
-            .literal = Literal{ .number = value },
+            .type = .NUMBER,
+            .literal = .{ .number = value },
             .lexeme = lexeme,
             .line = self.line,
         };
@@ -173,11 +173,11 @@ pub const Scanner = struct {
         }
 
         const value: []u8 = self.source[self.start..self.current];
-        const key = self.ctx.keywords.get(value) orelse TokenType.IDENTIFIER;
+        const key = self.ctx.keywords.get(value) orelse .IDENTIFIER;
 
         return Token{
             .type = key,
-            .literal = Literal{ .identifier = value },
+            .literal = .{ .string = value },
             .lexeme = value,
             .line = self.line,
         };

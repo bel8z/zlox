@@ -105,22 +105,22 @@ fn buildKeywordMap(allocator: *mem.Allocator) !std.StringHashMap(TokenType) {
     var map = std.StringHashMap(TokenType).init(allocator);
     errdefer map.deinit();
 
-    try map.put("and", TokenType.AND);
-    try map.put("class", TokenType.CLASS);
-    try map.put("else", TokenType.ELSE);
-    try map.put("false", TokenType.FALSE);
-    try map.put("for", TokenType.FOR);
-    try map.put("fun", TokenType.FUN);
-    try map.put("if", TokenType.IF);
-    try map.put("nil", TokenType.NIL);
-    try map.put("or", TokenType.OR);
-    try map.put("print", TokenType.PRINT);
-    try map.put("return", TokenType.RETURN);
-    try map.put("super", TokenType.SUPER);
-    try map.put("this", TokenType.THIS);
-    try map.put("true", TokenType.TRUE);
-    try map.put("var", TokenType.VAR);
-    try map.put("while", TokenType.WHILE);
+    try map.put("and", .AND);
+    try map.put("class", .CLASS);
+    try map.put("else", .ELSE);
+    try map.put("false", .FALSE);
+    try map.put("for", .FOR);
+    try map.put("fun", .FUN);
+    try map.put("if", .IF);
+    try map.put("nil", .NIL);
+    try map.put("or", .OR);
+    try map.put("print", .PRINT);
+    try map.put("return", .RETURN);
+    try map.put("super", .SUPER);
+    try map.put("this", .THIS);
+    try map.put("true", .TRUE);
+    try map.put("var", .VAR);
+    try map.put("while", .WHILE);
 
     return map;
 }
