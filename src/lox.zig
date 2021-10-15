@@ -13,6 +13,8 @@ const _token = @import("token.zig");
 
 const Scanner = @import("scanner.zig").Scanner;
 
+pub const ast = @import("ast.zig");
+
 // Constants
 const max_size = 1024 * 1024 * 1024;
 

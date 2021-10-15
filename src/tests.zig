@@ -1,6 +1,8 @@
 const std = @import("std");
 const fs = std.fs;
 
+const lox = @import("lox.zig");
+
 //======//
 
 test "test read unbuffered" {
@@ -105,6 +107,14 @@ test "test visitor pattern" {
     var c = Cook{};
 
     b.accept(&c);
+}
+
+//======//
+
+const ast = lox.ast;
+
+test "test ast" {
+    var exp = ast.Expr{ .literal = lox.Literal{ .number = 5 } };
 }
 
 //======//
