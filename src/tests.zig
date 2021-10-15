@@ -70,3 +70,41 @@ fn createMap(allocator: *std.mem.Allocator) !StringMap {
 }
 
 //======//
+
+test "test visitor pattern" {
+    const Beignet = struct {};
+    const Cruller = struct {};
+
+    const Pastry = union(enum) {
+        const Self = @This();
+
+        beignet: Beignet,
+        cruller: Cruller,
+
+        fn accept(self: *Self, visitor: anytype) void {
+            switch (self.*) {
+                .beignet => |value| visitor.visitBeignet(value),
+                .cruller => |value| visitor.visitCruller(value),
+            }
+        }
+    };
+
+    const Cook = struct {
+        const Self = @This();
+
+        fn visitBeignet(_: *Self, _: Beignet) void {
+            std.log.warn("Cooking beignet", .{});
+        }
+
+        fn visitCruller(_: *Self, _: Cruller) void {
+            std.log.warn("Cooking cruller", .{});
+        }
+    };
+
+    var b = Pastry{ .beignet = Beignet{} };
+    var c = Cook{};
+
+    b.accept(&c);
+}
+
+//======//
