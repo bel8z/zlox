@@ -112,9 +112,26 @@ test "test visitor pattern" {
 //======//
 
 const ast = lox.ast;
+const Token = lox.Token;
+const TokenType = lox.TokenType;
+const Expr = ast.Expr;
 
 test "test ast" {
-    var exp = ast.Expr{ .literal = lox.Literal{ .number = 5 } };
+    const allocator = std.testing.allocator;
+    const minus: []const u8 = "-";
+
+    var expr = try Expr.createLiteral(allocator, lox.Literal{ .number = 123 });
+    expr = try Expr.createGrouping(allocator, expr);
+    expr = try Expr.createUnary(allocator, Token{
+        .type = TokenType.MINUS,
+        .lexeme = minus,
+        .literal = lox.Literal.none,
+        .line = 1,
+    }, expr);
+    defer expr.destroyTree(allocator);
+
+    var printer = ast.AstPrinter.init();
+    try printer.printExpr(expr);
 }
 
 //======//

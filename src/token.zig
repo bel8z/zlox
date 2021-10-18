@@ -58,7 +58,7 @@ pub const TokenType = enum {
 
 pub const Token = struct {
     type: TokenType,
-    lexeme: []u8,
+    lexeme: []const u8,
     literal: Literal,
     line: usize,
 

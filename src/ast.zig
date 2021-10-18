@@ -1,4 +1,8 @@
 const std = @import("std");
+const mem = std.mem;
+const io = std.io;
+const fs = std.fs;
+
 const lox = @import("lox.zig");
 
 const Token = lox.Token;
@@ -7,75 +11,115 @@ const Literal = lox.Literal;
 
 pub const Expr = union(enum) {
     literal: Literal,
-    grouping: Expr,
-    binary: Binary,
+    grouping: *Expr,
     unary: Unary,
+    binary: Binary,
 
     pub const Unary = struct {
         operator: Token,
-        right: Expr,
+        right: *Expr,
     };
 
     pub const Binary = struct {
-        left: Expr,
+        left: *Expr,
         operator: Token,
-        right: Expr,
+        right: *Expr,
     };
 
-    pub fn accept(self: *Expr, comptime T: type, visitor: anytype) !T {
-        switch (self) {
+    pub fn createLiteral(allocator: *mem.Allocator, value: Literal) !*Expr {
+        var self: *Expr = try allocator.create(Expr);
+        self.* = .{ .literal = value };
+        return self;
+    }
+
+    pub fn createGrouping(allocator: *mem.Allocator, expr: *Expr) !*Expr {
+        var self: *Expr = try allocator.create(Expr);
+        self.* = .{ .grouping = expr };
+        return self;
+    }
+
+    pub fn createUnary(allocator: *mem.Allocator, operator: Token, right: *Expr) !*Expr {
+        var self: *Expr = try allocator.create(Expr);
+        self.* = .{ .unary = .{ .operator = operator, .right = right } };
+        return self;
+    }
+
+    pub fn createBinary(
+        allocator: *mem.Allocator,
+        left: *Expr,
+        operator: Token,
+        right: *Expr,
+    ) !*Expr {
+        var self: *Expr = try allocator.create(Expr);
+        self.* = .{ .binary = .{ .left = left, .operator = operator, .right = right } };
+        return self;
+    }
+
+    pub fn destroyTree(root: *Expr, allocator: *mem.Allocator) void {
+        switch (root.*) {
+            .literal => {},
+            .grouping => |value| value.destroyTree(allocator),
+            .unary => |value| value.right.destroyTree(allocator),
+            .binary => |value| {
+                value.left.destroyTree(allocator);
+                value.right.destroyTree(allocator);
+            },
+        }
+        allocator.destroy(root);
+    }
+
+    pub fn accept(self: *const Expr, comptime T: type, visitor: anytype) anyerror!T {
+        switch (self.*) {
             .literal => |value| return visitor.visitLiteral(value),
             .grouping => |value| return visitor.visitGrouping(value),
-            .binary => |value| return visitor.visitBinary(value),
             .unary => |value| return visitor.visitUnary(value),
+            .binary => |value| return visitor.visitBinary(value),
         }
     }
 };
 
-pub fn AstPrinter(comptime T: type) type {
-    return struct {
-        const Self = @This();
+pub const AstPrinter = struct {
+    const Self = @This();
 
-        writer: *T,
+    writer: fs.File.Writer,
 
-        pub fn init(writer: *T) Self {
-            return Self{ .writer = writer };
+    pub fn init() Self {
+        return Self{ .writer = io.getStdErr().writer() };
+    }
+
+    pub fn printExpr(self: *const Self, expr: *const Expr) !void {
+        try expr.accept(void, self);
+    }
+
+    fn visitLiteral(self: *const Self, literal: Literal) void {
+        switch (literal) {
+            .string => |value| self.print("{s}", .{value}),
+            .number => |value| self.print("{}", .{value}),
+            .none => self.print("nil", .{}),
         }
+    }
 
-        pub fn printExpr(self: *Self, expr: *const Expr) !void {
-            try expr.accept(void, self);
-        }
+    fn visitGrouping(self: *const Self, expr: *const Expr) !void {
+        self.print("(group ", .{});
+        try expr.accept(void, self);
+        self.print(")", .{});
+    }
 
-        fn visitLiteral(self: *Self, literal: Literal) !void {
-            switch (literal) {
-                .string => |value| try self.print("{s}", .{value}),
-                .number => |value| try self.print("{}", .{value}),
-                .none => try self.print("nil", .{}),
-            }
-        }
+    fn visitUnary(self: *const Self, unary: Expr.Unary) !void {
+        self.print("({s} ", .{unary.operator.lexeme});
+        try unary.right.accept(void, self);
+        self.print(")", .{});
+    }
 
-        fn visitGrouping(self: *Self, expr: Expr) void {
-            try self.print("(");
-            try expr.accept(self);
-            try self.print(")");
-        }
+    fn visitBinary(self: *const Self, unary: Expr.Binary) !void {
+        self.print("({s} ", .{unary.operator.lexeme});
+        try unary.left.accept(void, self);
+        self.print(" ", .{});
+        try unary.right.accept(void, self);
+        self.print(")", .{});
+    }
 
-        fn visitUnary(self: *Self, unary: Expr.Unary) void {
-            try self.print("({s} ", .{unary.operator.lexeme});
-            try unary.right.accept(self);
-            try self.print(")", .{});
-        }
-
-        fn visitBinary(self: *Self, unary: Expr.Binary) void {
-            try self.print("({s} ", .{unary.operator.lexeme});
-            try unary.left.accept(self);
-            try self.print(" ", .{});
-            try unary.right.accept(self);
-            try self.print(")", .{});
-        }
-
-        fn print(self: Self, comptime format: []const u8, args: anytype) !void {
-            try self.print(format, args);
-        }
-    };
-}
+    fn print(self: *const Self, comptime format: []const u8, args: anytype) void {
+        self.writer.print(format, args) catch unreachable;
+    }
+};
