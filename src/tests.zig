@@ -114,24 +114,27 @@ test "test visitor pattern" {
 const ast = lox.ast;
 const Token = lox.Token;
 const TokenType = lox.TokenType;
-const Expr = ast.Expr;
+const ExprId = ast.ExprId;
+const Ast = ast.Ast;
 
 test "test ast" {
     const allocator = std.testing.allocator;
     const minus: []const u8 = "-";
 
-    var expr = try Expr.createLiteral(allocator, lox.Literal{ .number = 123 });
-    expr = try Expr.createGrouping(allocator, expr);
-    expr = try Expr.createUnary(allocator, Token{
+    var tree = Ast.init(allocator);
+    defer tree.deinit();
+
+    var expr = tree.createLiteral(lox.Literal{ .number = 123 });
+    expr = tree.createGrouping(expr);
+    expr = tree.createUnary(Token{
         .type = TokenType.MINUS,
         .lexeme = minus,
         .literal = lox.Literal.none,
         .line = 1,
     }, expr);
-    defer expr.destroyTree(allocator);
 
     var printer = ast.AstPrinter.init();
-    try printer.printExpr(expr);
+    try printer.printTree(&tree, expr);
 }
 
 //======//

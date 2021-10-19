@@ -9,72 +9,98 @@ const Token = lox.Token;
 const TokenType = lox.TokenType;
 const Literal = lox.Literal;
 
-pub const Expr = union(enum) {
+/// Handle to an expression in the Ast
+pub const ExprId = usize;
+
+// NOTE (Matteo): Internal representation of an expression
+const Expr = union(enum) {
     literal: Literal,
-    grouping: *Expr,
+    grouping: ExprId,
     unary: Unary,
     binary: Binary,
 
-    pub const Unary = struct {
+    const Unary = struct {
         operator: Token,
-        right: *Expr,
+        right: ExprId,
     };
 
-    pub const Binary = struct {
-        left: *Expr,
+    const Binary = struct {
+        left: ExprId,
         operator: Token,
-        right: *Expr,
+        right: ExprId,
     };
+};
 
-    pub fn createLiteral(allocator: *mem.Allocator, value: Literal) !*Expr {
-        var self: *Expr = try allocator.create(Expr);
-        self.* = .{ .literal = value };
+/// Mantains an abstract syntax tree
+pub const Ast = struct {
+    nodes: std.ArrayList(Expr),
+
+    const Self = @This();
+
+    pub fn init(allocator: *mem.Allocator) Self {
+        var self = Self{
+            .nodes = std.ArrayList(Expr).init(allocator),
+        };
+
+        // NOTE (Matteo): Element 0 is dummy
+        _ = self.nodes.addOne() catch unreachable;
+
         return self;
     }
 
-    pub fn createGrouping(allocator: *mem.Allocator, expr: *Expr) !*Expr {
-        var self: *Expr = try allocator.create(Expr);
-        self.* = .{ .grouping = expr };
-        return self;
+    pub fn deinit(self: *Self) void {
+        self.nodes.deinit();
     }
 
-    pub fn createUnary(allocator: *mem.Allocator, operator: Token, right: *Expr) !*Expr {
-        var self: *Expr = try allocator.create(Expr);
-        self.* = .{ .unary = .{ .operator = operator, .right = right } };
-        return self;
+    pub fn createLiteral(self: *Self, value: Literal) ExprId {
+        self.nodes.append(.{ .literal = value }) catch return 0;
+
+        return self.lastId();
+    }
+
+    pub fn createGrouping(self: *Self, expr: ExprId) ExprId {
+        self.nodes.append(.{ .grouping = expr }) catch return 0;
+
+        return self.lastId();
+    }
+
+    pub fn createUnary(self: *Self, operator: Token, right: ExprId) ExprId {
+        self.nodes.append(.{
+            .unary = .{ .operator = operator, .right = right },
+        }) catch return 0;
+
+        return self.lastId();
     }
 
     pub fn createBinary(
-        allocator: *mem.Allocator,
-        left: *Expr,
+        self: *Self,
+        left: ExprId,
         operator: Token,
-        right: *Expr,
-    ) !*Expr {
-        var self: *Expr = try allocator.create(Expr);
-        self.* = .{ .binary = .{ .left = left, .operator = operator, .right = right } };
-        return self;
+        right: ExprId,
+    ) ExprId {
+        self.nodes.append(.{
+            .binary = .{ .left = left, .operator = operator, .right = right },
+        }) catch return 0;
+
+        return self.lastId();
     }
 
-    pub fn destroyTree(root: *Expr, allocator: *mem.Allocator) void {
-        switch (root.*) {
-            .literal => {},
-            .grouping => |value| value.destroyTree(allocator),
-            .unary => |value| value.right.destroyTree(allocator),
-            .binary => |value| {
-                value.left.destroyTree(allocator);
-                value.right.destroyTree(allocator);
-            },
-        }
-        allocator.destroy(root);
-    }
-
-    pub fn accept(self: *const Expr, comptime T: type, visitor: anytype) anyerror!T {
-        switch (self.*) {
+    pub fn walk(
+        self: *const Self,
+        root: ExprId,
+        comptime T: type,
+        visitor: anytype,
+    ) anyerror!T {
+        switch (self.nodes.items[root]) {
             .literal => |value| return visitor.visitLiteral(value),
             .grouping => |value| return visitor.visitGrouping(value),
             .unary => |value| return visitor.visitUnary(value),
             .binary => |value| return visitor.visitBinary(value),
         }
+    }
+
+    fn lastId(self: *const Self) ExprId {
+        return self.nodes.items.len - 1;
     }
 };
 
@@ -82,16 +108,18 @@ pub const AstPrinter = struct {
     const Self = @This();
 
     writer: fs.File.Writer,
+    tree: *const Ast = undefined,
 
     pub fn init() Self {
         return Self{ .writer = io.getStdErr().writer() };
     }
 
-    pub fn printExpr(self: *const Self, expr: *const Expr) !void {
-        try expr.accept(void, self);
+    pub fn printTree(self: *Self, tree: *const Ast, root: ExprId) !void {
+        self.tree = tree;
+        try tree.walk(root, void, self);
     }
 
-    fn visitLiteral(self: *const Self, literal: Literal) void {
+    fn visitLiteral(self: *Self, literal: Literal) void {
         switch (literal) {
             .string => |value| self.print("{s}", .{value}),
             .number => |value| self.print("{}", .{value}),
@@ -99,27 +127,27 @@ pub const AstPrinter = struct {
         }
     }
 
-    fn visitGrouping(self: *const Self, expr: *const Expr) !void {
+    fn visitGrouping(self: *Self, expr: ExprId) !void {
         self.print("(group ", .{});
-        try expr.accept(void, self);
+        try self.tree.walk(expr, void, self);
         self.print(")", .{});
     }
 
-    fn visitUnary(self: *const Self, unary: Expr.Unary) !void {
+    fn visitUnary(self: *Self, unary: Expr.Unary) !void {
         self.print("({s} ", .{unary.operator.lexeme});
-        try unary.right.accept(void, self);
+        try self.tree.walk(unary.right, void, self);
         self.print(")", .{});
     }
 
-    fn visitBinary(self: *const Self, unary: Expr.Binary) !void {
-        self.print("({s} ", .{unary.operator.lexeme});
-        try unary.left.accept(void, self);
+    fn visitBinary(self: *Self, binary: Expr.Binary) !void {
+        self.print("({s} ", .{binary.operator.lexeme});
+        try self.tree.walk(binary.left, void, self);
         self.print(" ", .{});
-        try unary.right.accept(void, self);
+        try self.tree.walk(binary.right, void, self);
         self.print(")", .{});
     }
 
-    fn print(self: *const Self, comptime format: []const u8, args: anytype) void {
+    fn print(self: *Self, comptime format: []const u8, args: anytype) void {
         self.writer.print(format, args) catch unreachable;
     }
 };
