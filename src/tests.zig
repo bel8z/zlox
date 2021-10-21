@@ -120,21 +120,21 @@ const Ast = ast.Ast;
 test "test ast" {
     const allocator = std.testing.allocator;
     const minus: []const u8 = "-";
+    const stderr = std.io.getStdErr().writer();
 
     var tree = Ast.init(allocator);
     defer tree.deinit();
 
     var expr = tree.createLiteral(lox.Literal{ .number = 123 });
     expr = tree.createGrouping(expr);
-    expr = tree.createUnary(Token{
-        .type = TokenType.MINUS,
+    expr = tree.createUnary(lox.Token{
+        .type = lox.TokenType.MINUS,
         .lexeme = minus,
         .literal = lox.Literal.none,
         .line = 1,
     }, expr);
 
-    var printer = ast.AstPrinter.init();
-    try printer.printTree(&tree, expr);
+    try tree.printTree(expr, &stderr);
 }
 
 //======//

@@ -85,69 +85,36 @@ pub const Ast = struct {
         return self.lastId();
     }
 
-    pub fn walk(
-        self: *const Self,
-        root: ExprId,
-        comptime T: type,
-        visitor: anytype,
-    ) anyerror!T {
+    pub fn printTree(self: *const Self, root: ExprId, writer: anytype) anyerror!void {
         switch (self.nodes.items[root]) {
-            .literal => |value| return visitor.visitLiteral(value),
-            .grouping => |value| return visitor.visitGrouping(value),
-            .unary => |value| return visitor.visitUnary(value),
-            .binary => |value| return visitor.visitBinary(value),
+            .literal => |lit| {
+                switch (lit) {
+                    .string => |value| try writer.print("{s}", .{value}),
+                    .number => |value| try writer.print("{}", .{value}),
+                    .none => try writer.print("nil", .{}),
+                }
+            },
+            .grouping => |group| {
+                try writer.print("(group ", .{});
+                try self.printTree(group, writer);
+                try writer.print(")", .{});
+            },
+            .unary => |value| {
+                try writer.print("({s} ", .{value.operator.lexeme});
+                try self.printTree(value.right, writer);
+                try writer.print(")", .{});
+            },
+            .binary => |value| {
+                try writer.print("({s} ", .{value.operator.lexeme});
+                try self.printTree(value.left, writer);
+                try writer.print(" ", .{});
+                try self.printTree(value.right, writer);
+                try writer.print(")", .{});
+            },
         }
     }
 
     fn lastId(self: *const Self) ExprId {
         return self.nodes.items.len - 1;
-    }
-};
-
-pub const AstPrinter = struct {
-    const Self = @This();
-
-    writer: fs.File.Writer,
-    tree: *const Ast = undefined,
-
-    pub fn init() Self {
-        return Self{ .writer = io.getStdErr().writer() };
-    }
-
-    pub fn printTree(self: *Self, tree: *const Ast, root: ExprId) !void {
-        self.tree = tree;
-        try tree.walk(root, void, self);
-    }
-
-    fn visitLiteral(self: *Self, literal: Literal) void {
-        switch (literal) {
-            .string => |value| self.print("{s}", .{value}),
-            .number => |value| self.print("{}", .{value}),
-            .none => self.print("nil", .{}),
-        }
-    }
-
-    fn visitGrouping(self: *Self, expr: ExprId) !void {
-        self.print("(group ", .{});
-        try self.tree.walk(expr, void, self);
-        self.print(")", .{});
-    }
-
-    fn visitUnary(self: *Self, unary: Expr.Unary) !void {
-        self.print("({s} ", .{unary.operator.lexeme});
-        try self.tree.walk(unary.right, void, self);
-        self.print(")", .{});
-    }
-
-    fn visitBinary(self: *Self, binary: Expr.Binary) !void {
-        self.print("({s} ", .{binary.operator.lexeme});
-        try self.tree.walk(binary.left, void, self);
-        self.print(" ", .{});
-        try self.tree.walk(binary.right, void, self);
-        self.print(")", .{});
-    }
-
-    fn print(self: *Self, comptime format: []const u8, args: anytype) void {
-        self.writer.print(format, args) catch unreachable;
     }
 };
