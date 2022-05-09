@@ -5,7 +5,7 @@ const Lox = @import("lox.zig").Lox;
 pub fn main() anyerror!void {
     // Setup the main allocator (useful for debugging)
     var gpalloc = std.heap.GeneralPurposeAllocator(.{}){};
-    var alloc = &gpalloc.allocator;
+    const alloc = gpalloc.allocator();
     defer _ = gpalloc.deinit();
 
     const args = try std.process.argsAlloc(alloc);
