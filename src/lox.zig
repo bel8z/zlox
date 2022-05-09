@@ -22,13 +22,13 @@ pub const Lox = struct {
     const Self = @This();
 
     had_error: bool,
-    allocator: *mem.Allocator,
+    allocator: mem.Allocator,
     stderr: std.fs.File.Writer,
     keywords: std.StringHashMap(TokenType),
 
     //=== Init / deinit ===//
 
-    pub fn init(allocator: *mem.Allocator) !Self {
+    pub fn init(allocator: mem.Allocator) !Self {
         return Self{
             .had_error = false,
             .allocator = allocator,
@@ -105,7 +105,7 @@ pub const Lox = struct {
     }
 };
 
-fn buildKeywordMap(allocator: *mem.Allocator) !std.StringHashMap(TokenType) {
+fn buildKeywordMap(allocator: mem.Allocator) !std.StringHashMap(TokenType) {
     var map = std.StringHashMap(TokenType).init(allocator);
     errdefer map.deinit();
 
