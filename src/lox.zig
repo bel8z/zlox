@@ -44,7 +44,8 @@ pub const Lox = struct {
     //=== Main interpreter loops ===//
 
     pub fn repl(self: *Self) !void {
-        var stdin = io.bufferedReader(io.getStdIn().reader()).reader();
+        var buf = io.bufferedReader(io.getStdIn().reader());
+        var stdin = buf.reader();
         var stdout = io.getStdOut().writer();
 
         while (true) {
@@ -64,7 +65,7 @@ pub const Lox = struct {
     }
 
     pub fn runFile(self: *Self, filename: []u8) !void {
-        var file = try std.fs.openFileAbsolute(filename, .{ .read = true });
+        var file = try std.fs.openFileAbsolute(filename, .{});
         var bytes = try file.readToEndAlloc(self.allocator, max_size);
 
         try self.run(bytes);
