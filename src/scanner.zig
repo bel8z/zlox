@@ -1,19 +1,21 @@
 const std = @import("std");
-const lox = @import("lox.zig");
 
-const Token = lox.Token;
-const TokenType = lox.TokenType;
-const Literal = lox.Literal;
+const token = @import("token.zig");
+const Token = token.Token;
+const TokenType = token.TokenType;
+const Literal = token.Literal;
+
+const Interpreter = @import("Interpreter.zig");
 
 pub const Scanner = struct {
     const Self = @This();
 
-    ctx: *lox.Lox,
+    ctx: *Interpreter,
     source: []u8,
     current: usize = 0,
     line: usize = 1,
 
-    pub fn init(ctx: *lox.Lox, source: []u8) Self {
+    pub fn init(ctx: *Interpreter, source: []u8) Self {
         return Self{
             .source = source,
             .ctx = ctx,

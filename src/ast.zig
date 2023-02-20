@@ -3,11 +3,11 @@ const mem = std.mem;
 const io = std.io;
 const fs = std.fs;
 
-const lox = @import("lox.zig");
+const token = @import("token.zig");
 
-const Token = lox.Token;
-const TokenType = lox.TokenType;
-const Literal = lox.Literal;
+const Token = token.Token;
+const TokenType = token.TokenType;
+const Literal = token.Literal;
 
 /// Handle to an expression in the Ast
 pub const ExprId = usize;

@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Lox = @import("lox.zig").Lox;
+const Interpreter = @import("Interpreter.zig");
 
 pub fn main() anyerror!void {
     // Setup the main allocator (useful for debugging)
@@ -13,7 +13,7 @@ pub fn main() anyerror!void {
 
     var stdout = std.io.getStdOut().writer();
 
-    var lox = try Lox.init(alloc);
+    var lox = try Interpreter.init(alloc);
     defer lox.deinit();
 
     switch (args.len) {
